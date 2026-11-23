@@ -14,6 +14,21 @@ if [[ "$(uname -m)" != "arm64" ]]; then
   exit 1
 fi
 
+DEV_DIR="$(xcode-select -p 2>/dev/null || true)"
+if [[ "$DEV_DIR" != *".app/Contents/Developer"* ]]; then
+  XCODE_APP="$(ls -d /Applications/Xcode*.app 2>/dev/null | head -1 || true)"
+  echo "❌ Aktives Entwicklerverzeichnis ist '$DEV_DIR' (nur Command Line Tools)." >&2
+  if [[ -n "$XCODE_APP" ]]; then
+    echo "   Xcode gefunden: $XCODE_APP – bitte aktivieren mit:" >&2
+    echo "     sudo xcode-select -s \"$XCODE_APP/Contents/Developer\"" >&2
+    echo "     sudo xcodebuild -license accept" >&2
+    echo "     xcodebuild -downloadComponent MetalToolchain" >&2
+  else
+    echo "   Bitte zuerst Xcode (26 oder neuer) aus dem App Store installieren." >&2
+  fi
+  exit 1
+fi
+
 echo "▶︎ Baue mit xcodebuild (MLX benötigt xcodebuild für die Metal-Shader) …"
 xcodebuild \
   -scheme OfflineTranslator \
