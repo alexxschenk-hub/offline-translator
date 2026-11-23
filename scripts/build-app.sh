@@ -29,6 +29,11 @@ if [[ "$DEV_DIR" != *".app/Contents/Developer"* ]]; then
   exit 1
 fi
 
+if ! xcrun metal --version >/dev/null 2>&1; then
+  echo "▶︎ Metal-Toolchain fehlt – wird jetzt heruntergeladen (einmalig, ca. 700 MB) …"
+  xcodebuild -downloadComponent MetalToolchain
+fi
+
 echo "▶︎ Baue mit xcodebuild (MLX benötigt xcodebuild für die Metal-Shader) …"
 xcodebuild \
   -scheme OfflineTranslator \
