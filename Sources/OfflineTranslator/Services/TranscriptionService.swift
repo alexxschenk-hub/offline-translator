@@ -158,6 +158,12 @@ final class TranscriptionService: @unchecked Sendable {
         if let variant = engine.whisperVariant {
             let kit = try await loadWhisper(variant, compute: compute, progress: progress)
             progress(0, "Transkribiere mit Whisper …")
+            guard duration > 0.2 else { throw TranscriptionError.emptyAudio }
+
+            // Parallele CoreML-Vorhersagen auf der GPU (MPSGraph) können unter macOS abstürzen
+            // (NSException in MLE5BindEmptyMemoryObjectToPort). Daher auf GPU/Auto seriell,
+            // auf der Neural Engine (von WhisperKit getesteter Standardpfad) leicht parallel.
+            let workers = compute == .neuralEngine ? 4 : 1
 
             let options = DecodingOptions(
                 verbose: false,
@@ -170,7 +176,7 @@ final class TranscriptionService: @unchecked Sendable {
                 skipSpecialTokens: true,
                 withoutTimestamps: false,
                 wordTimestamps: false,
-                concurrentWorkerCount: 4,
+                concurrentWorkerCount: workers,
                 chunkingStrategy: .vad)
 
             // Fortschritt beobachten
@@ -221,6 +227,13 @@ final class TranscriptionService: @unchecked Sendable {
                 detectedLanguage: language.code,
                 audioDuration: duration,
                 processingTime: Date().timeIntervalSince(started))
+        }
+    }
+
+    enum TranscriptionError: LocalizedError {
+        case emptyAudio
+        var errorDescription: String? {
+            "Die Audiodatei enthält keine (lesbaren) Audiodaten."
         }
     }
 
